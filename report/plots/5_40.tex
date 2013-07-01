@@ -1,0 +1,8 @@
+\begin{tikzpicture}
+	\begin{axis}[xlabel=iteration,ylabel=seconds]
+	\addplot table [x=i, y=runtimeSeconds, col sep=comma] {plots/5_40.dat};
+	\addlegendentry{$5\_40$}
+	\addplot [red, no markers] coordinates {(0,17.8667) (100,17.8667)};
+	\addlegendentry{GLPK}
+	\end{axis}
+\end{tikzpicture}

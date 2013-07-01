@@ -1,0 +1,6 @@
+\begin{tikzpicture}
+	\begin{axis}[xlabel=iteration,ylabel=seconds]
+	\addplot table [x=i, y=runtimeSeconds, col sep=comma] {plots/5_45.dat};
+	\addlegendentry{$5\_45$}
+	\end{axis}
+\end{tikzpicture}

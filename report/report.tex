@@ -1,0 +1,202 @@
+
+\documentclass[10pt,a4paper,titlepage]{article}
+\usepackage[portuguese]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage[portuguese]{algorithm2e}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+
+\usepackage[nottoc,numbib]{tocbibind}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,allcolors=blue}
+\usepackage[all]{hypcap}
+\title{Solucionando Sudoku com Simulated Annealing}
+\author{Ricardo Godoy de Oliveira \\ \texttt{rgoliveira@inf.ufrgs.br}}
+\date{Junho de 2013}
+
+\makeatletter
+\let\original@algocf@latexcaption\algocf@latexcaption
+\long\def\algocf@latexcaption#1[#2]{%
+  \@ifundefined{NR@gettitle}{%
+    \def\@currentlabelname{#2}%
+  }{\NR@gettitle{#2}}\original@algocf@latexcaption{#1}[{#2}]%
+}
+\makeatother
+
+\newtheorem*{sudoku}{Sudoku}
+\setcounter{secnumdepth}{5}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\clearpage
+
+\section{Introdução}
+	Sudoku --- pronunciado Sudôku, em português --- é uma espécie de quebra-cabeça onde o objetivo é preencher uma matriz $n^2 \times n^2$ de tal modo que na mesma linha, coluna e submatriz $n \times n$ o mesmo número não se repita. Foi projetado por Howard Garns, acredita-se que baseado no quadrado latino, trabalho de Leonhard Euler.
+	\\
+	No quadrado latino, temos uma matriz $n \times n$ preenchida com $n$ simbolos, cada um ocorrendo exatamente uma vez em cada linha e cada coluna. Sabe-se que o problema de completar um quadrado latino parcialmente preenchido é NP-Completo, e portanto o Sudoku também o é, já que as instâncias do último são um caso especial de quadrado latino.
+	\\
+	As primeiras edições do Sudoku surgiram nos Estados Unidos na década de 1970. Anos depois, na década de 1980, uma importante empresa japonesa de quebra-cabeças descobriu o jogo e o popularizou no Japão, onde se tornou um dos jogos mais vendidos. Hoje é jogado por milhões de pessoas no mundo todo.
+	\\
+	A forma mais frequente do Sudoku é a tabela de tamanho $9 \times 9$, embora também existam tabelas de tamanhos $16 \times 16$ e $25 \times 25$. Esta última é conhecida como \emph{Samurai Sudoku}, devido à sua notável dificuldade em relação às outras menores. Além de tamanhos variados, também existem variações com regras diferentes; algumas variantes são apresentadas em \cite{variations}.
+
+\section{Definição do problema}
+	O problema que será discutido aqui será o de completar uma instância de Sudoku que já possua alguns valores definidos. Tais valores serão denominados \emph{células} e serão fixos, ou seja, não poderão ser alterados em momento algum.
+	\\
+	De maneira mais formal, podemos dar a seguinte definição ao problema:
+	\begin{sudoku}
+		Dada uma matriz $n^2 \times n^2$, preenchê-la utilizando os números $i \in [1,n^2]$, de tal modo que:
+		\begin{enumerate}
+		  \item Cada linha da matriz de células contém cada número $i \in [1,n^2]$ exatamente uma vez; \label{sdk:r1}
+		  \item Cada coluna da matriz de células contém cada número $i \in [1,n^2]$ exatamente uma vez; \label{sdk:r2}
+		  \item Cada submatriz $n \times n$ contém cada número $i \in [1,n^2]$ exatamente uma vez. \label{sdk:r3}
+		\end{enumerate}
+	\end{sudoku}
+
+\section{Simulated Annealing}
+	A metaheurística \emph{Simulated Annealing} --- ou Recozimento Simulado --- tem base em uma analogia com um processo físico onde se busca um estado de baixa energia em um dado sólido: primeiramente, o material é aquecido até altas temperaturas, e então ele é resfriado tão lentamente quanto for necessário para que os átomos do sólido acabem se organizando de maneira uniforme, até um estado de energia mínima. Esse processo é utilizado para que o material final tenha uma energia interna baixa, o que diminui a possibilidade de defeitos \cite{wikiSApt,wikiSAen}.
+	\\
+	Para realizar o processo de arrefecimento, o ponto crucial é o controle da temperatura. É com isso que se atinge o estado desejado do sistema. Caso a temperatura caia rápido demais, talvez isso acarrete em defeitos no material ou em um estado que não é o de energia interna mínima. Mas caso a temperatura seja controlada de forma adequada, o sólido final irá adquirir uma estrura ótima, contendo um valor mínimo de energia interna.
+	\\
+	A metaheurística traz a idéia da temperatura para a solução de problemas de otimização. Através dela tentamos escapar de mínimos locais por um mecanismo que, com uma probabilidade baseada nesta temperatura, permite a aceitação de uma solução inferior à atual; e conforme a temperatura é reduzida, esta probabilidade diminui. Deste modo, ao início do processo, estaremos aceitando praticamente qualquer solução do espaço de busca; ao final, estaremos aceitando apenas soluções que demonstrem melhoria.
+
+\subsection{Algoritmo}
+Na implementação da técnica de Simulated Annealing, o algoritmo de Metropolis \cite[p.~160-3]{aula} \cite{wikiMetropolisHastings} é utilizado para controlar a geração e a aceitação de novas soluções.
+
+A partir de uma solução existente $s$ e uma dada temperatura $T$, o algoritmo de Metropolis tem a seguinte forma:
+
+\begin{algorithm}[H]
+ \LinesNumbered
+ \Entrada{$s$, $T$}
+ \Saida{Solução $s'$ com $c(s') \leq c(s)$}
+ \Repita{critério de parada é satisfeito}{
+	 seleciona $s' \in N(s)$ aleatoriamente\;
+	 seja $\Delta \gets c(s') - c(s)$\;
+	 \eSe{$\Delta \leq 0$}
+		{atualiza $s \gets s'$\;}
+		{atualiza $s \gets s'$ com probabilidade $e^{-(\Delta/T)}$\;}
+ }
+ \Retorna{$s$}\;
+ \caption{Metropolis} \label{alg:metro}
+\end{algorithm}
+
+Onde:
+\begin{itemize}
+	\item $N(s)$ é a vizinhança de $s$;
+	\item $c(s)$ é o custo da solução $s$.
+\end{itemize}
+
+Utilizando este algoritmo, podemos formular uma técnica para Simulated Annealing como segue:
+\\
+\begin{algorithm}[H]
+ \LinesNumbered
+ \Entrada{$s$, $T$, $\alpha$, $sl$}
+ \Saida{Solução $s'$ com $c(s') \leq c(s)$}
+ \Repita{critério de parada é satisfeito}{
+ 	\Para{$sl$ vezes}{
+		seleciona $s' \in N(s)$ aleatoriamente\;
+		seja $\Delta \gets c(s') - c(s)$\;
+		\eSe{$\Delta \leq 0$}
+			{atualiza $s \gets s'$\;}
+			{atualiza $s \gets s'$ com probabilidade $e^{-(\Delta/T)}$\;}
+	}
+	$T \gets \alpha . T$
+ }
+ \Retorna{$s$}\;
+ \caption{Simulated Annealing} \label{alg:sa}
+\end{algorithm}
+
+Onde:
+\begin{itemize}
+	\item $s$ é a solução atual;
+	\item $T$ é a temperatura inicial;
+	\item $\alpha$ é a taxa de resfriamento;
+	\item $sl$ é o comprimento de cada estágio, ou seja, o número de iterações a serem executadas para cada nível de temperatura.
+\end{itemize}
+
+\section{Aplicação ao problema}
+	Para que seja possível aplicar a metaheurística, antes é necessário definir algumas coisas, como por exemplo a representação do problema, operador de vizinhança, entre outras. Estas definições serão explicadas a seguir.
+
+	\subsection{Solução Inicial} \label{aplic:si}
+	Uma das entradas do \nameref{alg:sa} é uma solução atual. Sendo assim, antes mesmo de iniciar o processo, se faz necessária uma solução inicial para suprir esta entrada. \\
+	Na implementação que fiz, esta solução inicial é gerada respeitando a terceira restrição\textsuperscript{[\ref{sdk:r3}]} do jogo. Portanto, a idéia é que durante todo o processo esta restrição é garantida.
+	
+	\subsection{Vizinhança} \label{aplic:viz}
+	O operador de vizinhança é necessário para gerar uma nova solução, e esta será ou não aceita conforme o algoritmo de \nameref{alg:metro}. \\
+	Para tal, como a solução inicial gerada respeita a terceira restrição\textsuperscript{[\ref{sdk:r3}]}, o operador de vizinhança deve manter esta propriedade. Portanto, o operador de vizinhança que defini escolhe, dentro de uma mesma submatriz $n \times n$, duas células \textbf{não-fixas} e as troca de lugar (\emph{swap}).
+	
+	\subsection{Função objetivo}
+	Levando em consideração as duas primeiras restrições\textsuperscript{[\ref{sdk:r1}][\ref{sdk:r2}]}, é evidente que, quando ambas são satisfeitas, não haverão números repetidos na mesma linha ou coluna.\\
+	Sendo assim, dados
+	\begin{equation*}
+		x_{zi} = \text{número de vezes que $z \in [1,n^2]$ se repete na linha $i \in [1,n^2]$}
+	\end{equation*}
+	e
+	\begin{equation*}
+		y_{zj} = \text{número de vezes que $z \in [1,n^2]$ se repete na coluna $j \in [1,n^2]$}
+	\end{equation*}
+	a função objetivo é
+	\begin{equation*}
+	Custo(s) = \sum\limits_{z=1}^{n^2} \sum\limits_{i=1}^{n^2} x_{zi} + \sum\limits_{z=1}^{n^2} \sum\limits_{j=1}^{n^2} y_{zj}
+	\end{equation*}
+	Isso irá funcionar bem pois, como a \nameref{aplic:si} e a \nameref{aplic:viz} sempre respeitam a terceira restrição\textsuperscript{[\ref{sdk:r3}]}, basta que a função objetivo avalie o quanto as linhas e colunas distam de uma solução ótima. Sendo assim, uma solução ótima irá possuir o valor zero.
+	
+\section{Testes}
+	\subsection{Calibrando parâmetros}
+	Para calibrar os parâmetros da metaheurítica foram realizados diversos testes aleatórios, além de uma pesquisa na literatura para tentar encontrar valores de referência ou até mesmo alguma forma sistemática de fazer a calibragem. Embora alguns autores tenham sugestões de calibragem inicial (vide \cite[Seção 1.7 (pg 44,45)]{springer})), os valores são muito sensíveis ao problema e às instâncias. \\
+	Após diversos testes, foram encontrados os seguintes valores gerais para os parâmetros:
+	\begin{itemize}
+		\item Temperatura inicial: $n \times 100$
+		\item $\alpha$: 0.9 (utilizando a lei $T_{k+1} = \alpha \times T_k$)
+		\item Iterações por estágio de temperatura: $n^2$
+	\end{itemize}
+	
+	\subsection{Resultados}
+	A seguir estão dispostos os gráficos apresentando o tempo de execução da metaheurística ao longo de 100 testes para cada instância fornecida. Também está presente nos gráficos, para fins de comparação, uma reta representando a média do tempo de execução do solucionador genérico do GLPK.
+	
+		\subsubsection{Instâncias de ordem 3}
+			\paragraph*{}
+			\input{plots/3_10.tex}
+
+			\paragraph*{}
+			\input{plots/3_45.tex}
+
+			\paragraph*{}
+			\input{plots/3_80.tex}
+
+		\subsubsection{Instâncias de ordem 4}
+			\paragraph*{}
+			\input{plots/4_10.tex}
+
+			\paragraph*{}
+			\input{plots/4_45.tex}
+
+			\paragraph*{}
+			\input{plots/4_80.tex}
+
+		\subsubsection{Instâncias de ordem 5}
+			\paragraph*{}
+			\input{plots/5_10.tex}\\
+			Neste caso acima o GLPK levou 773.5000 segundos para resolver. Não está no gráfico pois é muito distante da metaheurística.
+
+			\paragraph*{}
+			\input{plots/5_40.tex}
+
+			\paragraph*{}
+			\input{plots/5_45.tex}\\
+			Neste caso acima o GLPK levou 2058.8667 segundos para resolver. Não está no gráfico pois é muito distante da metaheurística.
+
+			\paragraph*{}
+			\input{plots/5_80.tex}
+	
+	\section{Conclusões}
+	A técnica de Simulated Annealing é bastante simples de se implementar e a convergência é garantida. Por esse ângulo, é uma excelente metaheurística e pode ser considerada para uma diversidade de problemas. Por outro lado, possui a grave desvantagem de ser difícil de calibrar, pois seus parâmetros são muito sensíveis, o que resulta em um tempo muito grande de calibragem para que se tenha confiança no valores encontrados. Ainda assim, a experiência de implementar esse solucionador foi bastante interessante e creio que agregou um conhecimento que me será muito útil em diversas outras situações.
+\clearpage
+\input{bib.tex}
+\end{document}

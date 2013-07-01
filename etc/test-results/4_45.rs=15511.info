@@ -1,0 +1,15 @@
+
+Parameters:
+  instance file:	stdin
+  initial temp.:	not set. Assuming default [instance order * 100].
+  temp. decrease:	not set. Assuming default [0.9].
+  temperature stages:	not set. Assuming default [(instance order)^2].
+  random seed:		15511
+
+Solving... OK!
+Execution info:
+  Initial Solution:	168
+  Final Solution:	0
+  Runtime:		~2.640000s
+
+Solution dumped to file "etc/out/4_45.rs=15511.out".
